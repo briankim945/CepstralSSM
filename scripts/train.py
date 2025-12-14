@@ -8,7 +8,7 @@ import argparse
 import os.path as osp
 
 from src.convnext import ConvNeXt
-from training_utils import TrainingConfig, Logger, EarlyStopping, visualize_predictions
+from .training_utils import TrainingConfig, Logger, EarlyStopping, visualize_predictions
 from data.dataloader import load_dataset_from_directory
 
 
