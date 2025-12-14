@@ -1,11 +1,3 @@
-"""
-JAX DataLoader for Local Files
-================================
-
-This module provides dataloaders for reading various file formats from local directories.
-Compatible with JAX training loops.
-"""
-
 import jax
 import jax.numpy as jnp
 from jax import random
