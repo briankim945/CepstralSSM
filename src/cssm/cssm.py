@@ -2,7 +2,7 @@ import jax
 import jax.numpy as jnp
 from flax import nnx
 from flax import linen as nn
-from ops import cssm_coupled_scan_op
+from .ops import cssm_coupled_scan_op
 
 class hCSSM(nn.Module):
     channels: int
