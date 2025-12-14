@@ -1,54 +1,62 @@
 from datasets import load_dataset
+import grain.python as grain
 # import matplotlib.pyplot as plt
 
 
-# def display_datapoints(*datapoints, tag="", names_map=None):
-#     num_samples = len(datapoints)
+seed = 12
+train_batch_size = 32
+val_batch_size = 2 * train_batch_size
 
-#     fig, axs = plt.subplots(1, num_samples, figsize=(20, 10))
-#     for i, datapoint in enumerate(datapoints):
-#         if isinstance(datapoint, dict):
-#             img, label = datapoint["image"], datapoint["label"]
-#         else:
-#             img, label = datapoint
+if __name__ == "__main__":
+    train_dataset = load_dataset("/gpfs/data/shared/imagenet/ILSVRC2012/train")
+    val_dataset = load_dataset("/gpfs/data/shared/imagenet/ILSVRC2012/val") 
+    test_dataset = load_dataset("/gpfs/data/shared/imagenet/ILSVRC2012/test") 
 
-#         if hasattr(img, "dtype") and img.dtype in (np.float32, ):
-#             img = ((img - img.min()) / (img.max() - img.min()) * 255.0).astype(np.uint8)
+    print("Training dataset size:", len(train_dataset))
+    print("Validation dataset size:", len(val_dataset))
+    print("Test dataset size:", len(test_dataset))
 
-#         label_str = f" ({names_map[label]})" if names_map is not None else ""
-#         axs[i].set_title(f"{tag}Label: {label}{label_str}")
-#         axs[i].imshow(img)
+    # Create an `grain.IndexSampler` with no sharding for single-device computations.
+    train_sampler = grain.IndexSampler(
+        len(train_dataset),  # The total number of samples in the data source.
+        shuffle=True,            # Shuffle the data to randomize the order.of samples
+        seed=seed,               # Set a seed for reproducibility.
+        shard_options=grain.NoSharding(),  # No sharding since this is a single-device setup.
+        num_epochs=1,            # Iterate over the dataset for one epoch.
+    )
+
+    val_sampler = grain.IndexSampler(
+        len(val_dataset),  # The total number of samples in the data source.
+        shuffle=False,         # Do not shuffle the data.
+        seed=seed,             # Set a seed for reproducibility.
+        shard_options=grain.NoSharding(),  # No sharding since this is a single-device setup.
+        num_epochs=1,          # Iterate over the dataset for one epoch.
+    )
 
 
-# Select first 20 classes to reduce the dataset size and the training time.
-train_size = 20 * 750
-val_size = 20 * 250
+    train_loader = grain.DataLoader(
+        data_source=train_dataset,
+        sampler=train_sampler,                 # A sampler to determine how to access the data.
+        worker_count=4,                        # Number of child processes launched to parallelize the transformations among.
+        worker_buffer_size=2,                  # Count of output batches to produce in advance per worker.
+        operations=[
+            grain.Batch(train_batch_size, drop_remainder=True),
+        ]
+    )
 
-train_dataset = load_dataset("/gpfs/data/shared/imagenet/ILSVRC2012/train") #load_dataset("food101", split=f"train[:{train_size}]")
-val_dataset = load_dataset("/gpfs/data/shared/imagenet/ILSVRC2012/val") #load_dataset("food101", split=f"validation[:{val_size}]")
+    # Test (validation) dataset `grain.DataLoader`.
+    val_loader = grain.DataLoader(
+        data_source=val_dataset,
+        sampler=val_sampler,                   # A sampler to determine how to access the data.
+        worker_count=4,                        # Number of child processes launched to parallelize the transformations among.
+        worker_buffer_size=2,
+        operations=[
+            grain.Batch(val_batch_size),
+        ]
+    )
 
-# Create labels mapping where we map current labels between 0 and 19.
-labels_mapping = {}
-index = 0
-for i in range(0, len(val_dataset), 250):
-    label = val_dataset[i]["label"]
-    if label not in labels_mapping:
-        labels_mapping[label] = index
-        index += 1
+    train_batch = next(iter(train_loader))
+    val_batch = next(iter(val_loader))
 
-inv_labels_mapping = {v: k for k, v in labels_mapping.items()}
-
-print("Training dataset size:", len(train_dataset))
-print("Validation dataset size:", len(val_dataset))
-
-# display_datapoints(
-#     train_dataset[0], train_dataset[1000], train_dataset[2000], train_dataset[3000],
-#     tag="(Training) ",
-#     names_map=train_dataset.features["label"].names
-# )
-
-# display_datapoints(
-#     val_dataset[0], val_dataset[1000], val_dataset[2000], val_dataset[-1],
-#     tag="(Validation) ",
-#     names_map=val_dataset.features["label"].names
-# )
+    print("Training batch info:", train_batch["image"].shape, train_batch["image"].dtype, train_batch["label"].shape, train_batch["label"].dtype)
+    print("Validation batch info:", val_batch["image"].shape, val_batch["image"].dtype, val_batch["label"].shape, val_batch["label"].dtype)
