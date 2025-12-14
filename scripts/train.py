@@ -248,8 +248,7 @@ def train_with_file_dataloader(
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('-d', '--data_dir', type=str, default='./data_dir')
-    parser.add_argument('-o', '--output_dir', type=str, required=True)
-    parser.add_argument('-c', '--config', type=str, required=True)
+    parser.add_argument('-o', '--output_dir', type=str, default='./checkpoints')
     args = parser.parse_args()
 
     # Configuration
@@ -265,8 +264,8 @@ if __name__ == "__main__":
         gradient_clip=1.0,
         log_every=50,
         eval_every=200,
-        checkpoint_dir='file_checkpoints',
-        log_dir='file_logs',
+        checkpoint_dir=args.output_dir,
+        log_dir='logs',
         task='regression'
     )
     
@@ -274,7 +273,7 @@ if __name__ == "__main__":
     print("Training with File-Based DataLoaders")
     print("=" * 70)
     
-    # Step 2: Train model
+    # Train model
     print("\nTraining model...")
     final_state, logger = train_with_file_dataloader(
         train_dir=str(osp.join(args.data_dir, "train")),
