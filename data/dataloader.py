@@ -7,7 +7,6 @@ from typing import Iterator, Tuple, List, Optional, Callable
 import json
 import pickle
 from PIL import Image
-import pandas as pd
 
 
 class FileDataLoader:
@@ -189,50 +188,6 @@ class ImageDataLoader(FileDataLoader):
             return img_jax, jnp.array(label)
         
         return img_jax
-
-
-class CSVDataLoader(FileDataLoader):
-    """DataLoader for CSV files."""
-    
-    def __init__(
-        self,
-        *args,
-        feature_columns: Optional[List[str]] = None,
-        label_column: Optional[str] = None,
-        **kwargs
-    ):
-        """
-        Args:
-            feature_columns: List of column names to use as features
-            label_column: Column name for labels
-        """
-        super().__init__(*args, file_pattern="*.csv", **kwargs)
-        self.feature_columns = feature_columns
-        self.label_column = label_column
-    
-    def load_file(self, filepath: Path):
-        """Load a CSV file."""
-        df = pd.read_csv(filepath)
-        
-        # Extract features
-        if self.feature_columns:
-            features = df[self.feature_columns].values
-        else:
-            # Use all columns except label
-            if self.label_column:
-                features = df.drop(columns=[self.label_column]).values
-            else:
-                features = df.values
-        
-        features_jax = jnp.array(features, dtype=jnp.float32)
-        
-        # Extract labels if specified
-        if self.label_column:
-            labels = df[self.label_column].values
-            labels_jax = jnp.array(labels)
-            return features_jax, labels_jax
-        
-        return features_jax
 
 
 class SequenceDataLoader(FileDataLoader):
