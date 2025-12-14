@@ -100,7 +100,7 @@ class ConvNeXt(nnx.Module):
         *,
         rngs: nnx.Rngs,
     ):
-        self.downsample_layers = list()
+        self.downsample_layers = nnx.List()
         self.depths = depths
 
         # stem: produces NHWC
@@ -127,11 +127,11 @@ class ConvNeXt(nnx.Module):
             self.downsample_layers.append(downsample_layer)
 
         # stages and blocks
-        self.stages = list()
+        self.stages = nnx.List()
         dp_rates = list(jnp.linspace(0, drop_path_rate, sum(depths)))
         curr = 0
         for i in range(4):
-            stage_blocks = list()
+            stage_blocks = nnx.List()
             for j in range(depths[i]):
                 stage_blocks.append(
                     Block(

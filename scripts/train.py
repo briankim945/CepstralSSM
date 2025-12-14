@@ -120,7 +120,7 @@ if __name__ == "__main__":
         rngs=rngs
     )
 
-    optimizer = nnx.ModelAndOptimizer(model, optax.sgd(lr_schedule, momentum, nesterov=True))
+    optimizer = nnx.Optimizer(model, optax.sgd(lr_schedule, momentum, nesterov=True), wrt=nnx.Param)
 
     eval_metrics = nnx.MultiMetric(
         loss=nnx.metrics.Average('loss'),
