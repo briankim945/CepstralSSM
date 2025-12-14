@@ -1,6 +1,7 @@
 import jax
 import jax.numpy as jnp
 from jax import random
+from flax import nnx
 from pathlib import Path
 import numpy as np
 from typing import Optional
@@ -43,15 +44,15 @@ def train_with_file_dataloader(
     logger = Logger(log_dir)
     early_stopping = EarlyStopping(patience=10, min_delta=1e-4)
     
-    # Create model
-    print("\n1. Initializing model...")
-    model = ConvNeXt()
-    
     # Initialize model parameters
     rng = random.PRNGKey(42)
-    dummy_input = jnp.ones((config.batch_size, config.seq_len, config.d_model))
-    variables = model.init(rng, dummy_input)
-    params = variables['params']
+
+    # Create model
+    print("\n1. Initializing model...")
+    rngs = nnx.Rngs(42)
+    ### TODO: Make this modifiable
+    model = ConvNeXt(rngs=rngs)
+    params = nnx.state(model, nnx.Param)
     
     num_params = sum(x.size for x in jax.tree_util.tree_leaves(params))
     print(f"   Model has {num_params:,} parameters")
