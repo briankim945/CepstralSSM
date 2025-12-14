@@ -13,6 +13,7 @@ from jax import numpy as jnp
 from src.convnext import ConvNeXt
 import tqdm
 import sys
+import argparse
 
 
 bar_format = "{desc}[{n_fmt}/{total_fmt}]{postfix} [{elapsed}<{remaining}]"
@@ -80,101 +81,44 @@ def eval_step(
         labels=labels,
     )
 
-def train_one_epoch(epoch):
-    model.train()  # Set model to the training mode: e.g. update batch statistics
-    with tqdm.tqdm(
-        desc=f"[train] epoch: {epoch}/{num_epochs}, ",
-        total=total_steps,
-        bar_format=bar_format,
-        leave=True,
-    ) as pbar:
-        for batch in train_loader:
-            loss = train_step(model, optimizer, batch)
-            train_metrics_history["train_loss"].append(loss.item())
-            pbar.set_postfix({"loss": loss.item()})
-            pbar.update(1)
-
 if __name__ == "__main__":
-    # train_dataset = load_dataset("/gpfs/data/shared/imagenet/ILSVRC2012")
-    # val_dataset = load_dataset("/gpfs/data/shared/imagenet/ILSVRC2012") 
-    # test_dataset = load_dataset("/gpfs/data/shared/imagenet/ILSVRC2012") 
-
-    # print("Training dataset size:", len(train_dataset))
-    # print("Validation dataset size:", len(val_dataset))
-    # print("Test dataset size:", len(test_dataset))
-
-    # # Create an `grain.IndexSampler` with no sharding for single-device computations.
-    # train_sampler = grain.IndexSampler(
-    #     len(train_dataset),  # The total number of samples in the data source.
-    #     shuffle=True,            # Shuffle the data to randomize the order.of samples
-    #     seed=seed,               # Set a seed for reproducibility.
-    #     shard_options=grain.NoSharding(),  # No sharding since this is a single-device setup.
-    #     num_epochs=1,            # Iterate over the dataset for one epoch.
-    # )
-
-    # # val_sampler = grain.IndexSampler(
-    # #     len(val_dataset),  # The total number of samples in the data source.
-    # #     shuffle=False,         # Do not shuffle the data.
-    # #     seed=seed,             # Set a seed for reproducibility.
-    # #     shard_options=grain.NoSharding(),  # No sharding since this is a single-device setup.
-    # #     num_epochs=1,          # Iterate over the dataset for one epoch.
-    # # )
-
-
-    # train_loader = grain.DataLoader(
-    #     data_source=train_dataset,
-    #     sampler=train_sampler,                 # A sampler to determine how to access the data.
-    #     worker_count=4,                        # Number of child processes launched to parallelize the transformations among.
-    #     worker_buffer_size=2,                  # Count of output batches to produce in advance per worker.
-    #     operations=[
-    #         grain.Batch(train_batch_size, drop_remainder=True),
-    #     ]
-    # )
-
-    # # # Test (validation) dataset `grain.DataLoader`.
-    # # val_loader = grain.DataLoader(
-    # #     data_source=val_dataset,
-    # #     sampler=val_sampler,                   # A sampler to determine how to access the data.
-    # #     worker_count=4,                        # Number of child processes launched to parallelize the transformations among.
-    # #     worker_buffer_size=2,
-    # #     operations=[
-    # #         grain.Batch(val_batch_size),
-    # #     ]
-    # # )
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--data_dir', type=str, default='./data_dir')
+    args = parser.parse_args()
 
     # Load the dataset (point root to where ImageNet is downloaded)
     # You need your ImageNet data in the correct folder structure
-    # imagenet_data = datasets.ImageNet(root='/gpfs/data/shared/imagenet/ILSVRC2012', split='train', transform=transform)
-    imagenet_data = datasets.ImageFolder(root='/gpfs/data/shared/imagenet/ILSVRC2012', transform=transform)
+    imagenet_data = datasets.ImageFolder(root=args.data_dir, transform=transform)
     print("Loaded in dataset...")
-    train_dataset, test_dataset = torch.utils.data.random_split(imagenet_data, [0.8, 0.2])
+    train_dataset, val_dataset = torch.utils.data.random_split(imagenet_data, [0.8, 0.2])
+    # print(imagenet_data[0], imagenet_data[0][0].shape)
 
     # Use PyTorch DataLoader
-    train_loader = DataLoader(imagenet_data, batch_size=64, shuffle=True, num_workers=4)
+    train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True, num_workers=4)
+    val_loader = DataLoader(val_dataset, batch_size=64, shuffle=True, num_workers=4)
     print("Loaded in dataloader...")
 
-    train_batch = torch_to_jax(next(iter(train_loader)))
-    # val_batch = next(iter(val_loader))
+    train_features, train_labels = next(iter(train_loader))
+    val_features, val_labels = next(iter(val_loader))
 
-    print("Training batch info:", train_batch["image"].shape, train_batch["image"].dtype, train_batch["label"].shape, train_batch["label"].dtype)
-    # print("Validation batch info:", val_batch["image"].shape, val_batch["image"].dtype, val_batch["label"].shape, val_batch["label"].dtype)
+    print("Training batch info:", train_features.shape, train_features.dtype, train_labels.shape, train_labels.dtype)
+    print("Validation batch info:", val_features.shape, val_features.dtype, val_labels.shape, val_labels.dtype)
 
-    sys.exit()
-
-    num_epochs = 3
+    num_epochs = 10000
     learning_rate = 0.001
     momentum = 0.8
     total_steps = len(train_dataset) // train_batch_size
 
     lr_schedule = optax.linear_schedule(learning_rate, 0.0, num_epochs * total_steps)
 
-    # iterate_subsample = np.linspace(0, num_epochs * total_steps, 100)
-
-
     # CREATE MODEL
     rngs = nnx.Rngs(42)
     ### TODO: Make this modifiable
-    model = ConvNeXt(rngs=rngs)
+    model = ConvNeXt(
+        num_classes=1000,
+        dims=(224, 384, 768, 1536),
+        rngs=rngs
+    )
 
     optimizer = nnx.ModelAndOptimizer(model, optax.sgd(lr_schedule, momentum, nesterov=True))
 
@@ -192,6 +136,20 @@ if __name__ == "__main__":
         "val_loss": [],
         "val_accuracy": [],
     }
+
+    def train_one_epoch(epoch):
+        model.train()  # Set model to the training mode: e.g. update batch statistics
+        with tqdm.tqdm(
+            desc=f"[train] epoch: {epoch}/{num_epochs}, ",
+            total=total_steps,
+            bar_format=bar_format,
+            leave=True,
+        ) as pbar:
+            for batch in train_loader:
+                loss = train_step(model, optimizer, batch)
+                train_metrics_history["train_loss"].append(loss.item())
+                pbar.set_postfix({"loss": loss.item()})
+                pbar.update(1)
 
     def evaluate_model(epoch):
         # Computes the metrics on the training and test sets after each training epoch.
