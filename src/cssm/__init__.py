@@ -1,1 +1,1 @@
-from cssm import hCSSM
+from .cssm import hCSSM
