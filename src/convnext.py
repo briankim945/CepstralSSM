@@ -100,7 +100,7 @@ class ConvNeXt(nnx.Module):
         *,
         rngs: nnx.Rngs,
     ):
-        self.downsample_layers = nnx.List()
+        self.downsample_layers = list()
         self.depths = depths
 
         # stem: produces NHWC
