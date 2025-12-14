@@ -3,12 +3,17 @@ import jax.numpy as jnp
 from jax import random
 import optax
 from flax.training import train_state
+
 import matplotlib.pyplot as plt
+
+from torch.utils.data import Dataset
+import numpy as np
+from PIL import Image
+
 from typing import Dict, List, Callable, Optional
 import json
 from pathlib import Path
 from dataclasses import dataclass
-import numpy as np
 
 
 @dataclass
@@ -355,6 +360,70 @@ def visualize_predictions(
     
     plt.close()
 
+
+class FlatImageFolderDataset(Dataset):
+    """
+    A PyTorch Dataset for loading images from a flat directory (no subfolders).
+    
+    Args:
+        root_dir (str): Path to directory containing images
+        transform (callable, optional): Optional transform to apply to images
+        valid_extensions (tuple, optional): Valid image file extensions
+    """
+    
+    def __init__(
+        self,
+        root_dir: str,
+        transform: Optional[Callable] = None,
+        valid_extensions: tuple = ('.jpg', '.jpeg', '.png', '.bmp', '.tiff', '.webp')
+    ):
+        self.root_dir = Path(root_dir)
+        self.transform = transform
+        self.valid_extensions = valid_extensions
+        
+        # Get all image files from the directory
+        self.image_paths = self._get_image_paths()
+        
+        if len(self.image_paths) == 0:
+            raise ValueError(f"No images found in {root_dir} with extensions {valid_extensions}")
+    
+    def _get_image_paths(self) -> List[Path]:
+        """Collect all valid image file paths from the root directory."""
+        image_paths = []
+        
+        for file_path in self.root_dir.iterdir():
+            if file_path.is_file() and file_path.suffix.lower() in self.valid_extensions:
+                image_paths.append(file_path)
+        
+        return sorted(image_paths)  # Sort for consistent ordering
+    
+    def __len__(self) -> int:
+        return len(self.image_paths)
+    
+    def __getitem__(self, idx: int) -> dict:
+        """
+        Get an image by index.
+        
+        Args:
+            idx (int): Index of the image
+            
+        Returns:
+            dict: Dictionary containing 'image' (tensor) and 'path' (str)
+        """
+        img_path = self.image_paths[idx]
+        
+        # Load image
+        image = Image.open(img_path).convert('RGB')
+        
+        # Apply transforms if provided
+        if self.transform:
+            image = self.transform(image)
+        
+        return {
+            'image': image,
+            'path': str(img_path)
+        }
+    
 
 if __name__ == "__main__":
     # Example: Create a logger and plot some dummy metrics

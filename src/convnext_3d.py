@@ -37,8 +37,8 @@ class Block(nnx.Module):
         self.dwconv = nnx.Conv(
             in_features=dim,
             out_features=dim,
-            kernel_size=(7, 7, 3),
-            padding=((3,3),(3,3),(1,1)),
+            kernel_size=(7, 7, 7),
+            padding=((3,3),(3,3),(3,3)),
             feature_group_count=dim,
             rngs=rngs,
         )
@@ -103,7 +103,7 @@ class ConvNeXt3D(nnx.Module):
 
         # stem: produces NHWC
         stem = nnx.Sequential(
-            nnx.Conv(in_features=in_chans, out_features=dims[0], kernel_size=(4, 4), strides=(4, 4), rngs=rngs),
+            nnx.Conv(in_features=in_chans, out_features=dims[0], kernel_size=(4, 4, 4), strides=(4, 4, 4), rngs=rngs),
             nnx.LayerNorm(dims[0], epsilon=1e-6, rngs=rngs),
         )
 
@@ -117,8 +117,8 @@ class ConvNeXt3D(nnx.Module):
                 nnx.Conv(
                     in_features=dims[i],
                     out_features=dims[i + 1],
-                    kernel_size=(2, 2),
-                    strides=(2, 2),
+                    kernel_size=(2, 2, 2),
+                    strides=(2, 2, 2),
                     rngs=rngs,
                 ),
             )
