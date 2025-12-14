@@ -74,7 +74,7 @@ def train_with_file_dataloader(
     
     from flax.training import train_state
     state = train_state.TrainState.create(
-        apply_fn=model.apply,
+        apply_fn=model.__call__,
         params=params,
         tx=tx
     )
