@@ -106,7 +106,7 @@ def main():
             resume='allow'
         )
         wandb.run.name = args.output_dir
-        wandb.run.save()
+        wandb.run.save(root_dir)
 
     print("Finding jax devices...")
     print(jax.devices())
@@ -127,7 +127,7 @@ def main():
     print("Training batch info:", train_features.shape, train_features.dtype, train_labels.shape, train_labels.dtype)
     print("Validation batch info:", val_features.shape, val_features.dtype, val_labels.shape, val_labels.dtype)
 
-    num_epochs = config.epochs #100
+    num_epochs = config['epochs'] #100
     learning_rate = 0.001
     momentum = 0.8
     total_steps = len(train_dataset) // train_batch_size
@@ -175,16 +175,24 @@ def main():
             leave=True,
         ) as pbar:
             for iteration, batch in enumerate(train_loader):
-                batch = [
-                    jnp.permute_dims(jnp.asarray(batch[0]), (0,2,3,1)),
-                    jnp.asarray(batch[1], dtype=jnp.int32)
-                ]
+                if args.video:
+                    batch = [
+                        jnp.repeat(
+                            jnp.expand_dims(jnp.permute_dims(jnp.asarray(batch[0]), (0,2,3,1)), 1),
+                            config["timesteps"], axis=1),
+                        jnp.asarray(batch[1], dtype=jnp.int32)
+                    ]
+                else:
+                    batch = [
+                        jnp.permute_dims(jnp.asarray(batch[0]), (0,2,3,1)),
+                        jnp.asarray(batch[1], dtype=jnp.int32)
+                    ]
                 loss, logits = train_step(model, optimizer, batch)
                 train_metrics_history["train_loss"].append(loss.item())
 
-                metrics = {k: logits[k].mean() for k in model.metrics}
-                metrics = {k: v.astype(jnp.float32) for k, v in metrics.items()}
-                if is_master_process and epoch % config.log_interval == 0:
+                # metrics = {k: logits[k].mean() for k in model.metrics}
+                # metrics = {k: v.astype(jnp.float32) for k, v in metrics.items()}
+                if is_master_process and iteration % config['batch_log_interval'] == 0:
                     wandb.log({'train/lr': lr_schedule(epoch)}, step=epoch)
                     wandb.log({'train/loss': loss.item()}, step=epoch)
                     # wandb.log({**{f'train/{metric}': val
@@ -199,7 +207,7 @@ def main():
                     #     }
                     # )
                     pbar.set_postfix({"loss": loss.item()})
-                    pbar.update(config.log_interval) #pbar.update(1)
+                    pbar.update(config['batch_log_interval']) #pbar.update(1)
 
     def evaluate_model(epoch):
         # Computes the metrics on the training and test sets after each training epoch.
@@ -207,10 +215,18 @@ def main():
 
         eval_metrics.reset()  # Reset the eval metrics
         for val_batch in val_loader:
-            val_batch = [
-                jnp.permute_dims(jnp.asarray(val_batch[0]), (0,2,3,1)),
-                jnp.asarray(val_batch[1], dtype=jnp.int32)
-            ]
+            if args.video:
+                val_batch = [
+                    jnp.repeat(
+                                jnp.expand_dims(jnp.permute_dims(jnp.asarray(val_batch[0]), (0,2,3,1)), 1),
+                                config["timesteps"], axis=1),
+                    jnp.asarray(val_batch[1], dtype=jnp.int32)
+                ]
+            else:
+                val_batch = [
+                    jnp.permute_dims(jnp.asarray(val_batch[0]), (0,2,3,1)),
+                    jnp.asarray(val_batch[1], dtype=jnp.int32)
+                ]
             eval_step(model, val_batch, eval_metrics)
 
         for metric, value in eval_metrics.compute().items():
@@ -280,7 +296,8 @@ if __name__ == "__main__":
 
     config = {
         "epochs": 11,
-        "log_interval": 5,
+        "batch_log_interval": 1000,
+        "timesteps": 8,
     }
 
     main()

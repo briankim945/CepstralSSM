@@ -88,7 +88,7 @@ class EmbeddingsWrapper(nnx.Module):
 class ConvNeXt3D(nnx.Module):
     def __init__(
         self,
-        in_chans: int = 3,
+        in_steps: int = 8,
         num_classes: int = 1000,
         depths: Sequence[int] = (3, 3, 27, 3),
         dims: Sequence[int] = (192, 384, 768, 1536),
@@ -103,7 +103,7 @@ class ConvNeXt3D(nnx.Module):
 
         # stem: produces NHWC
         stem = nnx.Sequential(
-            nnx.Conv(in_features=in_chans, out_features=dims[0], kernel_size=(4, 4, 4), strides=(4, 4, 4), rngs=rngs),
+            nnx.Conv(in_features=in_steps, out_features=dims[0], kernel_size=(4, 4, 4), strides=(4, 4, 4), rngs=rngs),
             nnx.LayerNorm(dims[0], epsilon=1e-6, rngs=rngs),
         )
 
