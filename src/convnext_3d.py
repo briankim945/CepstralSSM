@@ -90,7 +90,7 @@ class ConvNeXt3D(nnx.Module):
         self,
         in_steps: int = 8,
         num_classes: int = 1000,
-        depths: Sequence[int] = (3, 3, 27, 3),
+        depths: Sequence[int] = (8, 8, 64, 8),
         dims: Sequence[int] = (192, 384, 768, 1536),
         drop_path_rate: float = 0.0,
         layer_scale_init_value: float = 1e-6,

@@ -53,6 +53,7 @@ def torch_to_jax(batch):
     return jax.numpy.array(numpy_batch)
 
 def compute_losses_and_logits(model: nnx.Module, images: jax.Array, labels: jax.Array):
+    print(images.shape)
     logits = model(images)
 
     loss = optax.softmax_cross_entropy_with_integer_labels(
