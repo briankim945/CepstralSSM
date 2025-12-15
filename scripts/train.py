@@ -242,7 +242,7 @@ def main():
             #             psnr=psnr_val)
 
             wandb.log({**{f'eval/{metric}': val
-                        for metric, val in eval_metrics.items()}
+                        for metric, val in eval_metrics.compute().items()}
                     }, step=epoch)
 
     # %%time
@@ -297,7 +297,7 @@ if __name__ == "__main__":
     config = {
         "epochs": 11,
         "batch_log_interval": 1000,
-        "timesteps": 8,
+        "timesteps": 16,
     }
 
     main()
