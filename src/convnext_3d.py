@@ -160,8 +160,8 @@ class ConvNeXt3D(nnx.Module):
                 rng, block_rng = jax.random.split(rng)
                 x = block(x, rng=block_rng, train=train)
 
-        # global average pool over H, W (NHWC)
-        x = jnp.mean(x, axis=(1, 2))
+        # global average pool over T, H, W (NTHWC)
+        x = jnp.mean(x, axis=(1, 2, 3))
 
         x = self.norm(x)
         x = self.head(x)
