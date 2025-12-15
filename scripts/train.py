@@ -141,6 +141,7 @@ def main():
     if args.video:
         model = ConvNeXt3D(
             num_classes=1000,
+            dims=(192, 192, 384, 768),
             rngs=rngs
         )
     else:
