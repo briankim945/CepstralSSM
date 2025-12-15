@@ -88,9 +88,9 @@ class EmbeddingsWrapper(nnx.Module):
 class ConvNeXt3D(nnx.Module):
     def __init__(
         self,
-        in_steps: int = 8,
+        in_steps: int = 3,
         num_classes: int = 1000,
-        depths: Sequence[int] = (8, 8, 64, 8),
+        depths: Sequence[int] = (3, 3, 27, 3),
         dims: Sequence[int] = (192, 384, 768, 1536),
         drop_path_rate: float = 0.0,
         layer_scale_init_value: float = 1e-6,
