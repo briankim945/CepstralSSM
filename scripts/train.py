@@ -95,10 +95,10 @@ def eval_step(
 def main():
     if is_master_process:
         root_dir = "logs"
-        os.makedirs(osp.join(root_dir, 'wandb'), exist_ok=True)
+        os.makedirs(osp.join(root_dir, args.output_dir), exist_ok=True)
 
         wandb.init(
-            project='teco_old',
+            project='conv_ssm',
             # config=config,
             dir=root_dir,
             # id=config.run_id,
