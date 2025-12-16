@@ -89,7 +89,7 @@ class Block(nnx.Module):
         return x
 
 
-class ConvNeXt(nnx.Module):
+class ConvNeXt3D(nnx.Module):
     r""" ConvNeXt
         A PyTorch impl of : `A ConvNet for the 2020s`  -
           https://arxiv.org/pdf/2201.03545.pdf
@@ -146,6 +146,6 @@ class ConvNeXt(nnx.Module):
         for i in range(4):
             x = self.downsample_layers[i](x)
             x = self.stages[i](x)
-        x = self.norm(jnp.mean(x, axis=(1, 2, 3))) # global average pooling, (N, H, W, C) -> (N, C)
+        x = self.norm(jnp.mean(x, axis=(1, 2, 3))) # global average pooling, (N, D, H, W, C) -> (N, C)
         x = self.head(x)
         return x
