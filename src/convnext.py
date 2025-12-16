@@ -15,14 +15,31 @@ class DropPath(nnx.Module):
         self.scale_by_keep = scale_by_keep
 
     def __call__(self, x, training: bool = True, rng: Optional[jax.Array] = None):
-        if self.drop_prob == 0. or not training:
-            return x
-        keep_prob = 1 - self.drop_prob
-        shape = (x.shape[0],) + (1,) * (x.ndim - 1)  # work with diff dim tensors, not just 2D ConvNets
-        random_tensor = jax.random.bernoulli(rng, p=keep_prob, shape=shape)
-        if keep_prob > 0.0 and self.scale_by_keep:
-            random_tensor.div_(keep_prob)
-        return x * random_tensor
+        # if self.drop_prob == 0. or not training:
+        #     return x
+        # keep_prob = 1 - self.drop_prob
+        # shape = (x.shape[0],) + (1,) * (x.ndim - 1)  # work with diff dim tensors, not just 2D ConvNets
+        # random_tensor = jax.random.bernoulli(rng, p=keep_prob, shape=shape)
+        # if keep_prob > 0.0 and self.scale_by_keep:
+        #     random_tensor.div_(keep_prob)
+        # return x * random_tensor
+        
+        if rng is None:
+            rng = jax.random.PRNGKey(0)
+
+        def drop_path():
+            keep_prob = jnp.asarray(1.0) - self.drop_prob
+            shape = (x.shape[0],) + (1,) * (x.ndim - 1)  # work with diff dim tensors, not just 2D ConvNets
+            random_tensor = jax.random.bernoulli(rng, p=keep_prob, shape=shape)
+            return x * (random_tensor / keep_prob)
+
+        cond = jnp.logical_or(self.drop_prob == 0.0, jnp.logical_not(jnp.asarray(training)))
+        return jax.lax.cond(
+            cond, 
+            lambda _: drop_path(), 
+            lambda _: x, 
+            operand=None
+        )
 
 
 class Block(nnx.Module):
