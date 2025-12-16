@@ -52,7 +52,7 @@ class Block(nnx.Module):
         self.pwconv1 = nnx.Linear(dim, 4 * dim, rngs=rngs) # pointwise/1x1 convs, implemented with linear layers
         self.act = lambda x: jax.nn.gelu(x, approximate=False) # Use exact GELU to match PyTorch
         self.pwconv2 = nnx.Linear(4 * dim, dim, rngs=rngs)
-        self.gamma = nnx.Parameter(layer_scale_init_value * jnp.ones((dim)), 
+        self.gamma = nnx.Param(layer_scale_init_value * jnp.ones((dim)), 
                                     requires_grad=True) if layer_scale_init_value > 0 else None
         self.drop_path = DropPath(drop_path)
 
