@@ -125,16 +125,6 @@ class ConvNeXt(nnx.Module):
         self.norm = nnx.LayerNorm(dims[-1], epsilon=1e-6, rngs=rngs) # final norm layer
         self.head = nnx.Linear(dims[-1], num_classes, rngs=rngs)
 
-        self.apply(self._init_weights)
-        self.head.weight.data.mul_(head_init_scale)
-        self.head.bias.data.mul_(head_init_scale)
-
-    def forward_features(self, x):
-        for i in range(4):
-            x = self.downsample_layers[i](x)
-            x = self.stages[i](x)
-        return self.norm(x.mean([-2, -1])) # global average pooling, (N, C, H, W) -> (N, C)
-
     def forward(self, x):
         for i in range(4):
             x = self.downsample_layers[i](x)
