@@ -20,7 +20,7 @@ import sys
 import argparse
 import time
 
-from convnext import ConvNeXt
+from src.convnext import ConvNeXt
 from src.convnext_3d import ConvNeXt3D
 from scripts.training_utils import FlatImageFolderDataset
 
