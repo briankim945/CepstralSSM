@@ -125,7 +125,7 @@ class ConvNeXt(nnx.Module):
         self.norm = nnx.LayerNorm(dims[-1], epsilon=1e-6, rngs=rngs) # final norm layer
         self.head = nnx.Linear(dims[-1], num_classes, rngs=rngs)
 
-    def forward(self, x):
+    def __call__(self, x):
         for i in range(4):
             x = self.downsample_layers[i](x)
             x = self.stages[i](x)
