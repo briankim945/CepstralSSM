@@ -20,7 +20,7 @@ import sys
 import argparse
 import time
 
-from src.convnext import ConvNeXt
+from convnext import ConvNeXt
 from src.convnext_3d import ConvNeXt3D
 from scripts.training_utils import FlatImageFolderDataset
 
@@ -95,18 +95,19 @@ def eval_step(
 def main():
     if is_master_process:
         root_dir = "logs"
-        os.makedirs(osp.join(root_dir, args.output_dir), exist_ok=True)
+        save_dir = osp.join(root_dir, args.output_dir)
+        os.makedirs(save_dir, exist_ok=True)
 
         wandb.init(
             project='conv_ssm',
             # config=config,
-            dir=root_dir,
+            dir=save_dir,
             # id=config.run_id,
             id=args.output_dir,
             resume='allow'
         )
         wandb.run.name = args.output_dir
-        wandb.run.save(root_dir)
+        wandb.run.save(save_dir)
 
     print("Finding jax devices...")
     print(jax.devices())
@@ -293,6 +294,7 @@ if __name__ == "__main__":
     parser.add_argument('--video', action='store_true')
     args = parser.parse_args()
 
+    print(jax.process_count())
     is_master_process = jax.process_index() == 0
 
     config = {
