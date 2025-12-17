@@ -140,12 +140,14 @@ def main():
     # CREATE MODEL
     rngs = nnx.Rngs(42)
     ### TODO: Make this modifiable
-    if args.video:
+    if args.type == 'video':
         model = ConvNeXt3D(
             num_classes=1000,
             dims=(192, 192, 384, 768),
             rngs=rngs
         )
+    elif args.type == 'cepstral':
+        model = CepstralConvNeXt(rngs=rngs)
     else:
         model = ConvNeXt(
             num_classes=1000,
@@ -178,7 +180,7 @@ def main():
             leave=True,
         ) as pbar:
             for iteration, batch in enumerate(train_loader):
-                if args.video:
+                if args.type == 'video' or args.type == 'cepstral':
                     batch = [
                         jnp.repeat(
                             jnp.expand_dims(jnp.permute_dims(jnp.asarray(batch[0]), (0,2,3,1)), 1),
@@ -193,22 +195,9 @@ def main():
                 loss, logits = train_step(model, optimizer, batch)
                 train_metrics_history["train_loss"].append(loss.item())
 
-                # metrics = {k: logits[k].mean() for k in model.metrics}
-                # metrics = {k: v.astype(jnp.float32) for k, v in metrics.items()}
                 if is_master_process and iteration % config['batch_log_interval'] == 0:
                     wandb.log({'train/lr': lr_schedule(epoch)}, step=epoch)
                     wandb.log({'train/loss': loss.item()}, step=epoch)
-                    # wandb.log({**{f'train/{metric}': val
-                    #             for metric, val in metrics.items()}
-                    #         }, step=epoch)
-                    # wandb.log(
-                    #     {
-                    #         **{f'train/{metric}': val
-                    #             for metric, val in metrics.items()},
-                    #         'train/lr': lr_schedule(epoch),
-                    #         'epoch': epoch,
-                    #     }
-                    # )
                     pbar.set_postfix({"loss": loss.item()})
                     pbar.update(config['batch_log_interval']) #pbar.update(1)
 
@@ -218,7 +207,7 @@ def main():
 
         eval_metrics.reset()  # Reset the eval metrics
         for val_batch in val_loader:
-            if args.video:
+            if args.type == 'video' or args.type == 'cepstral':
                 val_batch = [
                     jnp.repeat(
                                 jnp.expand_dims(jnp.permute_dims(jnp.asarray(val_batch[0]), (0,2,3,1)), 1),
@@ -235,15 +224,7 @@ def main():
         for metric, value in eval_metrics.compute().items():
             eval_metrics_history[f'val_{metric}'].append(value)
 
-        # print(f"[val] epoch: {epoch + 1}/{num_epochs}")
-        # print(f"- total loss: {eval_metrics_history['val_loss'][-1]:0.4f}")
-        # print(f"- Accuracy: {eval_metrics_history['val_accuracy'][-1]:0.4f}")
-
         if is_master_process:
-            # metrics = dict(lpips=loss_lpips,
-            #             ssim=ssim_val,
-            #             psnr=psnr_val)
-
             wandb.log({**{f'eval/{metric}': val
                         for metric, val in eval_metrics.compute().items()}
                     }, step=epoch)
@@ -292,7 +273,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('-d', '--data_dir', type=str, default='./data_dir')
     parser.add_argument('-o', '--output_dir', type=str, required=True)
-    parser.add_argument('--video', action='store_true')
+    parser.add_argument('--type', choices=['image', 'video', 'cepstral'], default='image')
     args = parser.parse_args()
 
     print(jax.process_count())
