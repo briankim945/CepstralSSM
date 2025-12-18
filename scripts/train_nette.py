@@ -15,7 +15,7 @@ from scripts.data import ImageNetteFolder
 
 import os
 from os import path as osp
-import tqdm
+from tqdm import tqdm
 import wandb
 import sys
 import argparse
@@ -188,15 +188,16 @@ def main():
 
     def train_one_epoch(epoch):
         model.train()  # Set model to the training mode: e.g. update batch statistics
-        with tqdm.tqdm(
-            desc=f"[train] epoch: {epoch}/{num_epochs}, ",
-            total=total_steps,
-            bar_format=bar_format,
-            leave=True,
-        ) as pbar:
+        # with tqdm.tqdm(
+        #     desc=f"[train] epoch: {epoch}/{num_epochs}, ",
+        #     total=total_steps,
+        #     bar_format=bar_format,
+        #     leave=True,
+        # ) as pbar:
+        with tqdm(train_loader, desc=f"Epoch {epoch+1}/{args.epochs}") as pbar:
             train_metrics.reset()  # Reset the train metrics
             num_batches = 0
-            for iteration, batch in enumerate(train_loader):
+            for iteration, batch in enumerate(pbar):
                 if args.type == 'video' or args.type == 'cepstral' or args.type == 'cepstral_small':
                     batch = [
                         jnp.repeat(
@@ -214,22 +215,22 @@ def main():
 
                 # metrics = {k: logits[k].mean() for k in model.metrics}
                 # metrics = {k: v.astype(jnp.float32) for k, v in metrics.items()}
-                if is_master_process and iteration % config['batch_log_interval'] == 0:
-                    # wandb.log({'train/lr': lr_schedule(epoch)}, step=epoch)
-                    # wandb.log({'train/loss': loss.item()}, step=epoch)
-                    # # wandb.log({**{f'train/{metric}': val
-                    # #             for metric, val in metrics.items()}
-                    # #         }, step=epoch)
-                    # # wandb.log(
-                    # #     {
-                    # #         **{f'train/{metric}': val
-                    # #             for metric, val in metrics.items()},
-                    # #         'train/lr': lr_schedule(epoch),
-                    # #         'epoch': epoch,
-                    # #     }
-                    # # )
-                    pbar.set_postfix({"loss": loss.item()})
-                    pbar.update(config['batch_log_interval']) #pbar.update(1)
+                # if is_master_process and iteration % config['batch_log_interval'] == 0:
+                #     # wandb.log({'train/lr': lr_schedule(epoch)}, step=epoch)
+                #     # wandb.log({'train/loss': loss.item()}, step=epoch)
+                #     # # wandb.log({**{f'train/{metric}': val
+                #     # #             for metric, val in metrics.items()}
+                #     # #         }, step=epoch)
+                #     # # wandb.log(
+                #     # #     {
+                #     # #         **{f'train/{metric}': val
+                #     # #             for metric, val in metrics.items()},
+                #     # #         'train/lr': lr_schedule(epoch),
+                #     # #         'epoch': epoch,
+                #     # #     }
+                #     # # )
+                #     pbar.set_postfix({"loss": loss.item()})
+                #     pbar.update(config['batch_log_interval']) #pbar.update(1)
                 num_batches += 1
             for metric, value in train_metrics.compute().items():
                 value = float(jnp.sum(value)) / max(num_batches, 1)
