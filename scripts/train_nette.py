@@ -144,17 +144,17 @@ def main():
     ### TODO: Make this modifiable
     if args.type == 'video':
         model = ConvNeXt3D(
-            num_classes=1000,
+            num_classes=10,
             dims=(192, 192, 384, 768),
             rngs=rngs
         )
     elif args.type == 'cepstral':
-        model = CepstralConvNeXt(rngs=rngs)
+        model = CepstralConvNeXt(num_classes=10, rngs=rngs)
     elif args.type == 'cepstral_small':
-        model = CepstralConvNeXt(depths=[1,1,3,1], rngs=rngs)
+        model = CepstralConvNeXt(num_classes=10, depths=[1,1,3,1], rngs=rngs)
     else:
         model = ConvNeXt(
-            num_classes=1000,
+            num_classes=10,
             rngs=rngs
         )
 
