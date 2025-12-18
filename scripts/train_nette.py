@@ -44,7 +44,6 @@ transform = transforms.Compose([
     transforms.CenterCrop(224),
     transforms.ToTensor(),
     transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-    transforms.Resize(192),
 ])
 
 # Function to convert PyTorch tensors to JAX arrays
@@ -151,7 +150,7 @@ def main():
     elif args.type == 'cepstral':
         model = CepstralConvNeXt(num_classes=10, rngs=rngs)
     elif args.type == 'cepstral_small':
-        model = CepstralConvNeXt(num_classes=10, depths=[1,1,3,1], rngs=rngs)
+        model = CepstralConvNeXt(num_classes=10, depths=[1,1,3,1], dims=[48,96,192,384], rngs=rngs)
     else:
         model = ConvNeXt(
             num_classes=10,
