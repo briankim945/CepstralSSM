@@ -198,8 +198,14 @@ def main():
                 train_metrics_history["train_loss"].append(loss.item())
 
                 if is_master_process and iteration % config['batch_log_interval'] == 0:
-                    wandb.log({'train/lr': lr_schedule(epoch)}, step=epoch)
-                    wandb.log({'train/loss': loss.item()}, step=epoch)
+                    # wandb.log(
+                    #     {'train/lr': lr_schedule(epoch)}, 
+                    #     step=epoch
+                    # )
+                    # wandb.log(
+                    #     {'train/loss': loss.item()}, 
+                    #     step=epoch
+                    # )
                     pbar.set_postfix({"loss": loss.item()})
                     pbar.update(config['batch_log_interval']) #pbar.update(1)
 
@@ -229,9 +235,12 @@ def main():
         print(f"\tval_accuracy: {eval_metrics_history['val_accuracy']}")
 
         if is_master_process:
-            wandb.log({**{f'eval/{metric}': val
+            wandb.log(
+                {**{f'eval/{metric}': val
                         for metric, val in eval_metrics.compute().items()}
-                    }, step=epoch)
+                    }, 
+                step=epoch
+            )
 
     # %%time
 
@@ -284,7 +293,7 @@ if __name__ == "__main__":
     is_master_process = jax.process_index() == 0
 
     config = {
-        "epochs": 11,
+        "epochs": 100,
         "batch_log_interval": 100,
         "timesteps": 16,
     }
