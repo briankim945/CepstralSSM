@@ -12,7 +12,7 @@ class CepstralBlock(nnx.Module):
         assert in_dim % num_blocks == 0, f"hidden_size {in_dim} should be divisble by num_blocks {num_blocks}"
         self.num_blocks = num_blocks
         self.hidden_block_size = in_dim // num_blocks
-        h_cepstral = hCSSM(channels=in_dim, kernel_size=kernel_size)
+        h_cepstral = hCSSM(channels=in_dim, kernel_size=kernel_size, rngs=rngs)
         hc_func = lambda x: h_cepstral(x)
         self.operator = jax.vmap(hc_func, in_axes=4, out_axes=4)
         self.linear = nnx.Linear(in_dim, out_dim, rngs=rngs)
