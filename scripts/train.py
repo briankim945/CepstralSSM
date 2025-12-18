@@ -275,7 +275,7 @@ def main():
 
     test_batch_size = 64
 
-    test_dataset = FlatImageFolderDataset(root_dir=osp.join(args.data_dir, 'train'), transform=transform)
+    test_dataset = FlatImageFolderDataset(root_dir=osp.join(args.data_dir, 'val'), transform=transform)
     test_loader = DataLoader(test_dataset, batch_size=test_batch_size, num_workers=1)
     preds = []
 

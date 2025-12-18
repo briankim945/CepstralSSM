@@ -118,6 +118,7 @@ def main():
     print("Loaded in dataset...")
     train_dataset, val_dataset = torch.utils.data.random_split(imagenet_data, [0.8, 0.2])
     # print(imagenet_data[0], imagenet_data[0][0].shape)
+    print("Train dataset:", len(train_dataset))
 
     # Use PyTorch DataLoader
     train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True, num_workers=1)
@@ -259,7 +260,7 @@ def main():
 
     test_batch_size = 64
 
-    test_dataset = FlatImageFolderDataset(root_dir=osp.join(args.data_dir, 'train'), transform=transform)
+    test_dataset = FlatImageFolderDataset(root_dir=osp.join(args.data_dir, 'val'), transform=transform)
     test_loader = DataLoader(test_dataset, batch_size=test_batch_size, num_workers=1)
     preds = []
 
@@ -284,7 +285,7 @@ if __name__ == "__main__":
 
     config = {
         "epochs": 11,
-        "batch_log_interval": 1000,
+        "batch_log_interval": 100,
         "timesteps": 16,
     }
 
