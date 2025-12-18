@@ -1,4 +1,5 @@
-from typing import Union, Path
+from typing import Union
+from pathlib import Path
 import os
 
 from torchvision import datasets
