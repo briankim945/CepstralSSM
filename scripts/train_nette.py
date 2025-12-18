@@ -27,6 +27,11 @@ from src.conv_cssm import CepstralConvNeXt
 from scripts.training_utils import FlatImageFolderDataset
 
 
+os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"]="false"
+# os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"]=".XX"
+os.environ["XLA_PYTHON_CLIENT_ALLOCATOR"]="platform"
+
+
 bar_format = "{desc}[{n_fmt}/{total_fmt}]{postfix} [{elapsed}<{remaining}]"
 
 
