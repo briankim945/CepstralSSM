@@ -36,7 +36,7 @@ bar_format = "{desc}[{n_fmt}/{total_fmt}]{postfix} [{elapsed}<{remaining}]"
 
 
 seed = 12
-train_batch_size = 32
+train_batch_size = 8
 val_batch_size = 2 * train_batch_size
 
 # Select first 20 classes to reduce the dataset size and the training time.
@@ -69,7 +69,7 @@ def compute_losses_and_logits(model: nnx.Module, images: jax.Array, labels: jax.
 
 @nnx.jit
 def train_step(
-    model: nnx.Module, optimizer: nnx.ModelAndOptimizer, batch: list,
+    model: nnx.Module, optimizer: nnx.ModelAndOptimizer, batch: list, train_metrics: nnx.MultiMetric
 ):
     # Convert np.ndarray to jax.Array on GPU
     images = batch[0]
@@ -79,6 +79,12 @@ def train_step(
     (loss, logits), grads = grad_fn(model, images, labels)
 
     optimizer.update(grads)  # In-place updates.
+
+    train_metrics.update(
+        loss=loss,
+        logits=logits,
+        labels=labels,
+    )
 
     return loss, logits
 
@@ -165,20 +171,20 @@ def main():
 
     optimizer = nnx.ModelAndOptimizer(model, optax.sgd(lr_schedule, momentum, nesterov=True), wrt=nnx.Param)
 
+    train_metrics = nnx.MultiMetric(
+        loss=nnx.metrics.Average('loss'),
+        accuracy=nnx.metrics.Accuracy(),
+    )
+
     eval_metrics = nnx.MultiMetric(
         loss=nnx.metrics.Average('loss'),
         accuracy=nnx.metrics.Accuracy(),
     )
 
 
-    train_metrics_history = {
-        "train_loss": [],
-    }
+    train_metrics_avg = {}
 
-    eval_metrics_history = {
-        "val_loss": [],
-        "val_accuracy": [],
-    }
+    eval_metrics_avg = {}
 
     def train_one_epoch(epoch):
         model.train()  # Set model to the training mode: e.g. update batch statistics
@@ -188,8 +194,10 @@ def main():
             bar_format=bar_format,
             leave=True,
         ) as pbar:
+            train_metrics.reset()  # Reset the train metrics
+            num_batches = 0
             for iteration, batch in enumerate(train_loader):
-                if args.type == 'video' or args.type == 'cepstral' or args.type == 'cepstral_small':
+                if args.video:
                     batch = [
                         jnp.repeat(
                             jnp.expand_dims(jnp.permute_dims(jnp.asarray(batch[0]), (0,2,3,1)), 1),
@@ -201,28 +209,48 @@ def main():
                         jnp.permute_dims(jnp.asarray(batch[0]), (0,2,3,1)),
                         jnp.asarray(batch[1], dtype=jnp.int32)
                     ]
-                loss, logits = train_step(model, optimizer, batch)
-                train_metrics_history["train_loss"].append(loss.item())
+                loss, logits = train_step(model, optimizer, batch, train_metrics)
+                # train_metrics_history["train_loss"].append(loss.item())
 
+                # metrics = {k: logits[k].mean() for k in model.metrics}
+                # metrics = {k: v.astype(jnp.float32) for k, v in metrics.items()}
                 if is_master_process and iteration % config['batch_log_interval'] == 0:
-                    # wandb.log(
-                    #     {'train/lr': lr_schedule(epoch)}, 
-                    #     step=epoch
-                    # )
-                    # wandb.log(
-                    #     {'train/loss': loss.item()}, 
-                    #     step=epoch
-                    # )
+                    # wandb.log({'train/lr': lr_schedule(epoch)}, step=epoch)
+                    # wandb.log({'train/loss': loss.item()}, step=epoch)
+                    # # wandb.log({**{f'train/{metric}': val
+                    # #             for metric, val in metrics.items()}
+                    # #         }, step=epoch)
+                    # # wandb.log(
+                    # #     {
+                    # #         **{f'train/{metric}': val
+                    # #             for metric, val in metrics.items()},
+                    # #         'train/lr': lr_schedule(epoch),
+                    # #         'epoch': epoch,
+                    # #     }
+                    # # )
                     pbar.set_postfix({"loss": loss.item()})
                     pbar.update(config['batch_log_interval']) #pbar.update(1)
+                num_batches += 1
+            for metric, value in train_metrics.compute().items():
+                value = float(jnp.sum(value)) / max(num_batches, 1)
+                train_metrics_avg[metric] = value
+            if is_master_process:
+                wandb.log({'train/lr': lr_schedule(epoch)}, step=epoch)
+                wandb.log({**{f'train/{metric}': val
+                        for metric, val in train_metrics_avg.items()}
+                    }, step=epoch)
+                print(f"[train] epoch: {epoch + 1}/{num_epochs}")
+                print(f"- Average loss: {train_metrics_avg['loss']:0.4f}")
+                print(f"- Average accuracy: {train_metrics_avg['accuracy']:0.4f}")
 
     def evaluate_model(epoch):
         # Computes the metrics on the training and test sets after each training epoch.
         model.eval()  # Sets model to evaluation model: e.g. use stored batch statistics.
 
         eval_metrics.reset()  # Reset the eval metrics
+        num_batches = 0
         for val_batch in val_loader:
-            if args.type == 'video' or args.type == 'cepstral' or args.type == 'cepstral_small':
+            if args.video:
                 val_batch = [
                     jnp.repeat(
                                 jnp.expand_dims(jnp.permute_dims(jnp.asarray(val_batch[0]), (0,2,3,1)), 1),
@@ -231,23 +259,31 @@ def main():
                 ]
             else:
                 val_batch = [
-                    jnp.permute_dims(jnp.asarray(val_batch[0]), (0,2,3,1)),
+                    jnp.permute_dims(jnp.asarray(val_batch['image']), (0,2,3,1)),
                     jnp.asarray(val_batch[1], dtype=jnp.int32)
                 ]
             eval_step(model, val_batch, eval_metrics)
+            num_batches += 1
 
         for metric, value in eval_metrics.compute().items():
-            eval_metrics_history[f'val_{metric}'].append(value)
-        print(f"\tval_loss: {eval_metrics_history['val_loss']}")
-        print(f"\tval_accuracy: {eval_metrics_history['val_accuracy']}")
+            value = float(jnp.sum(value)) / max(num_batches, 1)
+            eval_metrics_avg[metric] = value
+
+        # print(f"[val] epoch: {epoch + 1}/{num_epochs}")
+        # print(f"- total loss: {eval_metrics_history['val_loss'][-1]:0.4f}")
+        # print(f"- Accuracy: {eval_metrics_history['val_accuracy'][-1]:0.4f}")
 
         if is_master_process:
-            wandb.log(
-                {**{f'eval/{metric}': val
-                        for metric, val in eval_metrics.compute().items()}
-                    }, 
-                step=epoch
-            )
+            # metrics = dict(lpips=loss_lpips,
+            #             ssim=ssim_val,
+            #             psnr=psnr_val)
+
+            wandb.log({**{f'eval/{metric}': val
+                        for metric, val in eval_metrics_avg.items()}
+                    }, step=epoch)
+            print(f"[val] epoch: {epoch + 1}/{num_epochs}")
+            print(f"- Average loss: {eval_metrics_avg['loss']:0.4f}")
+            print(f"- Average accuracy: {eval_metrics_avg['accuracy']:0.4f}")
 
     # %%time
 
@@ -274,7 +310,7 @@ def main():
     print("Completed training...")
     print("Now testing...")
 
-    test_batch_size = 64
+    test_batch_size = 8
 
     test_dataset = FlatImageFolderDataset(root_dir=osp.join(args.data_dir, 'val'), transform=transform)
     test_loader = DataLoader(test_dataset, batch_size=test_batch_size, num_workers=1)
