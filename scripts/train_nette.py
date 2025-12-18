@@ -197,7 +197,7 @@ def main():
             train_metrics.reset()  # Reset the train metrics
             num_batches = 0
             for iteration, batch in enumerate(train_loader):
-                if args.video:
+                if args.type == 'video' or args.type == 'cepstral' or args.type == 'cepstral_small':
                     batch = [
                         jnp.repeat(
                             jnp.expand_dims(jnp.permute_dims(jnp.asarray(batch[0]), (0,2,3,1)), 1),
@@ -250,7 +250,7 @@ def main():
         eval_metrics.reset()  # Reset the eval metrics
         num_batches = 0
         for val_batch in val_loader:
-            if args.video:
+            if args.type == 'video' or args.type == 'cepstral' or args.type == 'cepstral_small':
                 val_batch = [
                     jnp.repeat(
                                 jnp.expand_dims(jnp.permute_dims(jnp.asarray(val_batch[0]), (0,2,3,1)), 1),
@@ -259,7 +259,7 @@ def main():
                 ]
             else:
                 val_batch = [
-                    jnp.permute_dims(jnp.asarray(val_batch['image']), (0,2,3,1)),
+                    jnp.permute_dims(jnp.asarray(val_batch[0]), (0,2,3,1)),
                     jnp.asarray(val_batch[1], dtype=jnp.int32)
                 ]
             eval_step(model, val_batch, eval_metrics)
