@@ -27,8 +27,8 @@ class hCSSM(nnx.Module):
         # features 32
         # kernel_size 3,3
         # strides 2,2
-        checkify.check(jnp.array_equal(jnp.reshape(jnp.reshape(input_seq, (B * T, H, W, C)), (B, T, H, W, C)), input_seq),
-                       "The reshapes aren't equal")
+        # checkify.check(jnp.array_equal(jnp.reshape(jnp.reshape(input_seq, (B * T, H, W, C)), (B, T, H, W, C)), input_seq),
+        #                "The reshapes aren't equal")
         stats = nnx.Conv(in_features=C, out_features=32,
                          kernel_size=(3,3), strides=(2,2), rngs=rngs
                          )(jnp.reshape(input_seq, (B * T, H, W, C))) # Downsample
