@@ -29,7 +29,7 @@ CLASS_NAMES = [
 
 class ImageNetteFolder(datasets.ImageFolder):
 
-    def find_classes(directory: Union[str, Path]) -> tuple[list[str], dict[str, int]]:
+    def find_classes(self, directory: Union[str, Path]) -> tuple[list[str], dict[str, int]]:
         classes = sorted(entry.name for entry in os.scandir(directory) if entry.is_dir())
         if not classes:
             raise FileNotFoundError(f"Couldn't find any class folder in {directory}.")
