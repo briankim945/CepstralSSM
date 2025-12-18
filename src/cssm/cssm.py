@@ -8,9 +8,20 @@ from typing import Optional
 from .ops import cssm_coupled_scan_op
 
 class hCSSM(nnx.Module):
-    def __init__(self, kernel_size: int, channels: int = 3):
+    def __init__(self, kernel_size: int, channels: int = 3, *, rngs: nnx.Rngs):
+        rng = jax.random.PRNGKey(0)
         self.channels = channels
         self.kernel_size = kernel_size
+        self.control_conv = nnx.Conv(in_features=channels, out_features=32,
+            kernel_size=(3,3), strides=(2,2), rngs=rngs
+        )
+        self.alpha_dense = nnx.Linear(32,channels,rngs=rngs)
+        self.delta_dense = nnx.Linear(32,channels,rngs=rngs)
+        self.mu_dense = nnx.Linear(32,channels,rngs=rngs)
+        self.gamma_dense = nnx.Linear(32,channels,rngs=rngs)
+        norm_initializer = nnx.initializers.normal()
+        self.k_exc = nnx.Param(norm_initializer(rng, (self.kernel_size, self.kernel_size, channels)))
+        self.k_inh = nnx.Param(norm_initializer(rng, (self.kernel_size, self.kernel_size, channels)))
     
     def __call__(self, input_seq, rng: Optional[jax.Array] = None):
         # MAKE THE stats CONTROLLER AN INITIALIZED OBJ?
@@ -29,9 +40,7 @@ class hCSSM(nnx.Module):
         # strides 2,2
         # checkify.check(jnp.array_equal(jnp.reshape(jnp.reshape(input_seq, (B * T, H, W, C)), (B, T, H, W, C)), input_seq),
         #                "The reshapes aren't equal")
-        stats = nnx.Conv(in_features=C, out_features=32,
-                         kernel_size=(3,3), strides=(2,2), rngs=rngs
-                         )(jnp.reshape(input_seq, (B * T, H, W, C))) # Downsample
+        stats = self.control_conv(jnp.reshape(input_seq, (B * T, H, W, C))) # Downsample
         stats = jnp.reshape(stats, (B, T, -1, 32)) # New shape -> (B, T, downsampled_h * downsampled_w, 32)
         jax.debug.print("stats.shape: {x}", x=stats.shape)
         stats = jax.nn.gelu(stats)
@@ -39,19 +48,17 @@ class hCSSM(nnx.Module):
         
         # 1. Decay Gates (Diagonals)
         # alpha: Shunting Inh (X decay), delta: Refractory (Y decay)
-        alpha = jax.nn.sigmoid(nnx.Linear(32,C,rngs=rngs)(ctx)) 
-        delta = jax.nn.sigmoid(nnx.Linear(32,C,rngs=rngs)(ctx))
+        alpha = jax.nn.sigmoid(self.alpha_dense(ctx)) 
+        delta = jax.nn.sigmoid(self.delta_dense(ctx))
         
         # 2. Coupling Gates (Off-Diagonals)
         # mu: Subtractive Inh strength, gamma: Additive Exc strength
-        mu    = jax.nn.softplus(nnx.Linear(32,C,rngs=rngs)(ctx))
-        gamma = jax.nn.softplus(nnx.Linear(32,C,rngs=rngs)(ctx))
+        mu    = jax.nn.softplus(self.mu_dense(ctx))
+        gamma = jax.nn.softplus(self.gamma_dense(ctx))
         
         # --- B. Spatial Kernels ---
         # Learnable Near (Exc) and Far (Inh) kernels
-        norm_initializer = nnx.initializers.normal()
-        k_exc = nnx.Param(norm_initializer(rng, (self.kernel_size, self.kernel_size, C)))
-        k_inh = nnx.Param(norm_initializer(rng, (self.kernel_size, self.kernel_size, C)))
+        
         # k_exc = self.param('k_exc', nn.initializers.normal(), 
         #                    (self.kernel_size, self.kernel_size, C))
         # k_inh = self.param('k_inh', nn.initializers.normal(), 
@@ -60,10 +67,10 @@ class hCSSM(nnx.Module):
         # FFT to Spectral Domain
         pad_h, pad_w = (H - self.kernel_size)//2, (W - self.kernel_size)//2
         # Pad function ...
-        K_E_spec = jnp.fft.rfft2(jnp.pad(k_exc, 
+        K_E_spec = jnp.fft.rfft2(jnp.pad(self.k_exc, 
                                          ((pad_h, H - self.kernel_size - pad_h),
                                           (pad_w, W - self.kernel_size -pad_w), (0,0))), axes=(0,1)) 
-        K_I_spec = jnp.fft.rfft2(jnp.pad(k_inh, 
+        K_I_spec = jnp.fft.rfft2(jnp.pad(self.k_inh, 
                                          ((pad_h, H - self.kernel_size - pad_h),
                                           (pad_w, W - self.kernel_size - pad_w), (0,0))), axes=(0,1))
         
