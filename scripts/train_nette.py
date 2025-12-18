@@ -44,6 +44,7 @@ transform = transforms.Compose([
     transforms.CenterCrop(224),
     transforms.ToTensor(),
     transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+    transforms.Resize(128),
 ])
 
 # Function to convert PyTorch tensors to JAX arrays
@@ -144,7 +145,7 @@ def main():
     if args.type == 'video':
         model = ConvNeXt3D(
             num_classes=10,
-            dims=(192, 192, 384, 768),
+            dims=(96, 192, 384, 768),
             rngs=rngs
         )
     elif args.type == 'cepstral':
