@@ -162,7 +162,7 @@ def main():
     elif args.type == 'cepstral':
         model = CepstralConvNeXt(num_classes=10, rngs=rngs)
     elif args.type == 'cepstral_small':
-        model = CepstralConvNeXt(num_classes=10, depths=[1,1,3,1], dims=[48,96,192,384], rngs=rngs)
+        model = CepstralConvNeXt(num_classes=10, depths=[1,1,1,1], rngs=rngs)
     else:
         model = ConvNeXt(
             num_classes=10,
