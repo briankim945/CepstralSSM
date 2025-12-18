@@ -150,6 +150,8 @@ def main():
         )
     elif args.type == 'cepstral':
         model = CepstralConvNeXt(rngs=rngs)
+    elif args.type == 'cepstral_small':
+        model = CepstralConvNeXt(depths=[1,1,3,1], rngs=rngs)
     else:
         model = ConvNeXt(
             num_classes=1000,
@@ -182,7 +184,7 @@ def main():
             leave=True,
         ) as pbar:
             for iteration, batch in enumerate(train_loader):
-                if args.type == 'video' or args.type == 'cepstral':
+                if args.type == 'video' or args.type == 'cepstral' or args.type == 'cepstral_small':
                     batch = [
                         jnp.repeat(
                             jnp.expand_dims(jnp.permute_dims(jnp.asarray(batch[0]), (0,2,3,1)), 1),
@@ -215,7 +217,7 @@ def main():
 
         eval_metrics.reset()  # Reset the eval metrics
         for val_batch in val_loader:
-            if args.type == 'video' or args.type == 'cepstral':
+            if args.type == 'video' or args.type == 'cepstral' or args.type == 'cepstral_small':
                 val_batch = [
                     jnp.repeat(
                                 jnp.expand_dims(jnp.permute_dims(jnp.asarray(val_batch[0]), (0,2,3,1)), 1),
@@ -286,7 +288,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('-d', '--data_dir', type=str, default='./data_dir')
     parser.add_argument('-o', '--output_dir', type=str, required=True)
-    parser.add_argument('--type', choices=['image', 'video', 'cepstral'], default='image')
+    parser.add_argument('--type', choices=['image', 'video', 'cepstral', 'cepstral_small'], default='image')
     args = parser.parse_args()
 
     print(jax.process_count())
