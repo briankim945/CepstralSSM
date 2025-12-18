@@ -85,6 +85,11 @@ class hCSSM(nnx.Module):
         
         # X -> Y (Excitation): +1.0 * K_E * gamma
         A_yx = K_E_spec[None, ...] * gamma[:, :, None, None] # (B, T, H_f, W_f, C)
+
+        # Reshape Diagonal Terms
+        _, _, H_f, W_f, _ = A_xy.shape
+        A_xx = jnp.tile(A_xx, (1,1,H_f,W_f,1))
+        A_yy = jnp.tile(A_yy, (1,1,H_f,W_f,1))
         
         # Stack into (B, T, H, W_f, C, 2, 2)
         row0 = jnp.stack([A_xx, A_xy], axis=-1)
