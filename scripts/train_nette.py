@@ -194,7 +194,7 @@ def main():
         #     bar_format=bar_format,
         #     leave=True,
         # ) as pbar:
-        with tqdm(train_loader, desc=f"Epoch {epoch+1}/{args.epochs}") as pbar:
+        with tqdm(train_loader, desc=f"Epoch {epoch+1}/{num_epochs}") as pbar:
             train_metrics.reset()  # Reset the train metrics
             num_batches = 0
             for iteration, batch in enumerate(pbar):
