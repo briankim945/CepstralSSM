@@ -20,6 +20,8 @@ import wandb
 import sys
 import argparse
 import time
+import random
+import string
 
 from src.convnext import ConvNeXt
 from src.convnext_3d import ConvNeXt3D
@@ -111,12 +113,13 @@ def main():
         save_dir = osp.join(root_dir, args.output_dir)
         os.makedirs(save_dir, exist_ok=True)
 
+        id_random = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(6))
         wandb.init(
             project='conv_ssm',
             # config=config,
             dir=save_dir,
             # id=config.run_id,
-            id=args.output_dir,
+            id=f"{args.output_dir}_{id_random}",
             resume='allow'
         )
         wandb.run.name = args.output_dir
