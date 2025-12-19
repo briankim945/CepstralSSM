@@ -26,7 +26,6 @@ class hCSSM(nnx.Module):
     def __call__(self, input_seq, rng: Optional[jax.Array] = None):
         # MAKE THE stats CONTROLLER AN INITIALIZED OBJ?
         # And all the linear layers
-        rngs = nnx.Rngs(42)
         if rng is None:
             rng = jax.random.PRNGKey(0)
         
@@ -94,9 +93,9 @@ class hCSSM(nnx.Module):
         A_yx = K_E_spec[None, ...] * gamma[:, :, None, None] # (B, T, H_f, W_f, C)
 
         # Reshape Diagonal Terms
-        _, _, H_f, W_f, _ = A_xy.shape
-        A_xx = jnp.tile(A_xx, (1,1,H_f,W_f,1))
-        A_yy = jnp.tile(A_yy, (1,1,H_f,W_f,1))
+        # _, _, H_f, W_f, _ = A_xy.shape
+        A_xx = jnp.tile(A_xx, (1,1,H,W,1))
+        A_yy = jnp.tile(A_yy, (1,1,H,W,1))
         
         # Stack into (B, T, H, W_f, C, 2, 2)
         row0 = jnp.stack([A_xx, A_xy], axis=-1)
