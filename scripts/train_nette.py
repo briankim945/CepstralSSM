@@ -51,7 +51,7 @@ transform = transforms.Compose([
     transforms.CenterCrop(224),
     transforms.ToTensor(),
     transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-    transforms.Resize(128),
+    # transforms.Resize(128),
 ])
 
 # Function to convert PyTorch tensors to JAX arrays
