@@ -68,11 +68,11 @@ class hCSSM(nnx.Module):
         pad_h, pad_w = (H - self.kernel_size)//2, (W - self.kernel_size)//2
         # Pad function ...
         K_E_spec = jnp.fft.rfft2(jnp.pad(self.k_exc, 
-                                         ((pad_h, H - self.kernel_size - pad_h),
-                                          (pad_w, W - self.kernel_size -pad_w), (0,0))), axes=(0,1)) 
+                                         ((pad_h, pad_h),
+                                          (pad_w, pad_w), (0,0))), axes=(0,1)) 
         K_I_spec = jnp.fft.rfft2(jnp.pad(self.k_inh, 
-                                         ((pad_h, H - self.kernel_size - pad_h),
-                                          (pad_w, W - self.kernel_size - pad_w), (0,0))), axes=(0,1))
+                                         ((pad_h, pad_h),
+                                          (pad_w, pad_w), (0,0))), axes=(0,1))
         
         # --- C. Build Transition Matrix K_t ---
         # We build the 2x2 matrix for every T, Freq, Channel
