@@ -321,7 +321,7 @@ def main():
     preds = []
 
     for batch in test_loader:
-        images = jnp.permute_dims(jnp.asarray(batch[0]), (0,2,3,1))
+        images = jnp.permute_dims(jnp.asarray(batch['image']), (0,2,3,1))
         logits = model(images)
         preds.append(logits)
 
