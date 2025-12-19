@@ -126,20 +126,34 @@ class CepstralConvNeXt(nnx.Module):
         # super().__init__()
 
         self.downsample_layers = nnx.List() # stem and 3 intermediate downsampling conv layers
+        # stem = nnx.Sequential(
+        #     CepstralBlock(in_dim=in_chans, out_dim=dims[0], kernel_size=4, num_blocks=num_blocks, rngs=rngs),
+        #     nnx.LayerNorm(dims[0], epsilon=1e-6, rngs=rngs),
+        # )
         stem = nnx.Sequential(
-            CepstralBlock(in_dim=in_chans, out_dim=dims[0], kernel_size=4, num_blocks=num_blocks, rngs=rngs),
+            nnx.Conv(in_features=in_chans, out_features=dims[0], kernel_size=(4, 4), strides=(4, 4), rngs=rngs),
             nnx.LayerNorm(dims[0], epsilon=1e-6, rngs=rngs),
         )
         self.downsample_layers.append(stem)
         for i in range(3):
+            # downsample_layer = nnx.Sequential(
+            #         nnx.LayerNorm(dims[i], epsilon=1e-6, rngs=rngs),
+            #         CepstralBlock(
+            #             in_dim=dims[i],
+            #             out_dim=dims[i + 1],
+            #             kernel_size=2,
+            #             num_blocks=num_blocks,
+            #             rngs=rngs
+            #         ),
+            # )
             downsample_layer = nnx.Sequential(
                     nnx.LayerNorm(dims[i], epsilon=1e-6, rngs=rngs),
-                    CepstralBlock(
-                        in_dim=dims[i],
-                        out_dim=dims[i + 1],
-                        kernel_size=2,
-                        num_blocks=num_blocks,
-                        rngs=rngs
+                    nnx.Conv(
+                        in_features=dims[i],
+                        out_features=dims[i + 1],
+                        kernel_size=(2, 2),
+                        strides=(2, 2),
+                        rngs=rngs,
                     ),
             )
             self.downsample_layers.append(downsample_layer)
